@@ -4,27 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "MmdCommon.h"
 #include "MmdCameraSequence.generated.h"
-
-USTRUCT(Category = "MiniMmdTools")
-struct MINIMMDTOOLS_API FMmdInterpolation
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere)
-	float X1;
-
-	UPROPERTY(EditAnywhere)
-	float X2;
-
-	UPROPERTY(EditAnywhere)
-	float Y1;
-
-	UPROPERTY(EditAnywhere)
-	float Y2;
-
-	float CalcValue(float Time) const;
-};
 
 USTRUCT(Category = "MiniMmdTools")
 struct MINIMMDTOOLS_API FMmdCameraKey 
@@ -50,38 +31,24 @@ struct MINIMMDTOOLS_API FMmdCameraKey
 	float FieldOfView;
 
 	UPROPERTY(EditAnywhere)
-	FMmdInterpolation InterpLocationX;
+	FMmdInterpolation LocationXInterpolation;
 
 	UPROPERTY(EditAnywhere)
-	FMmdInterpolation InterpLocationY;
+	FMmdInterpolation LocationYInterpolation;
 
 	UPROPERTY(EditAnywhere)
-	FMmdInterpolation InterpLocationZ;
+	FMmdInterpolation LocationZInterpolation;
 
 	UPROPERTY(EditAnywhere)
-	FMmdInterpolation InterpRotation;
+	FMmdInterpolation RotationInterpolation;
 
 	UPROPERTY(EditAnywhere)
-	FMmdInterpolation InterpDistance;
+	FMmdInterpolation DistanceInterpolation;
 
 	UPROPERTY(EditAnywhere)
-	FMmdInterpolation InterpFieldOfView;
+	FMmdInterpolation FieldOfViewInterpolation;
 };
 
-struct FMmdCameraProperty
-{
-	FVector Location;
-
-	FRotator Rotation;
-
-	float Distance;
-
-	float FieldOfView;
-};
-
-/**
- * 
- */
 UCLASS(Category = "MiniMmdTools")
 class MINIMMDTOOLS_API UMmdCameraSequence : public UObject
 {
@@ -94,8 +61,5 @@ public:
 	UPROPERTY(EditAnywhere)
 	int32 FrameOffset;
 
-	FMmdCameraProperty CalcCameraProperty(int32 Frame, float Subframe) const;
-
-private:
-	TPair<int32, int32> SearchKeyIndex(int32 Frame, float Subframe) const;
+	void CalcCameraProperty(int32 Frame, float Subframe, int32& OutCutNo, FVector& OutLocation, FRotator& OutRotation, float& OutDistance, float& OutFieldOfView) const;
 };

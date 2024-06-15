@@ -16,10 +16,10 @@ class MINIMMDTOOLS_API AMmdCameraActor : public ACameraActor
 
 public:
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<class UMmdCameraSequence>	CameraSequence;
+	TObjectPtr<class UMmdCameraSequence> CameraSequence;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	float	Frame;
+	float Frame;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
 	FVector LookAtOffset;
@@ -31,16 +31,16 @@ public:
 	FRotator RotationOffset;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	float	DistanceScale = 1.f;
+	float DistanceScale = 1.f;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	float	FieldOfViewScale = 1.f;
+	float FieldOfViewScale = 1.f;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	float	Zoom = 1.f;
+	float Zoom = 1.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32	OutputFrameRate = 30;
+	float OutputFrameRate = 30.0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bUseTemporalSampling = false;
@@ -49,14 +49,13 @@ public:
 
 	virtual void	Tick(float DeltaTime) override;
 
-	virtual bool	ShouldTickIfViewportsOnly() const override;
+	virtual bool	ShouldTickIfViewportsOnly() const override
+	{
+		return true;
+	}
 
 private:
 	class UCineCameraComponent* CineCameraComponent;
 
 	void UpdateCamera();
-
-	TPair<int32, float> CalcFrame() const;
-
-	float ToHorizontalFoV(float VerticalFoV) const;
 };

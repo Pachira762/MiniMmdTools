@@ -2,8 +2,8 @@
 
 
 #include "VmdFactory.h"
+#include "MmdAnimationSequence.h"
 #include "MmdCameraSequence.h"
-#include "MmdMorphSequence.h"
 
 #if PLATFORM_WINDOWS
 #include "Windows/WindowsHWrapper.h"
@@ -13,10 +13,12 @@
 
 namespace
 {
-	using FInterpolation = poml::Interpolation;
-	using FVmd = poml::VmdBase<FVector3f, FVector4f>;
+	using FVmdVector3 = FVector3f;
+	using FVmdVector4 = FVector4f;
+	using FVmdInterpolation = poml::Interpolation;
+	using FVmd = poml::VmdBase<FVmdVector3, FVmdVector4>;
 
-	FName ShiftJisToName(const std::string& Str)
+	FString ShiftJisToString(const std::string& Str)
 	{
 		int Length = MultiByteToWideChar(CP_ACP, 0, Str.c_str(), -1, nullptr, 0);
 
@@ -24,52 +26,34 @@ namespace
 		Buff.SetNum(Length + 1);
 		MultiByteToWideChar(CP_ACP, 0, Str.c_str(), -1, Buff.GetData(), Buff.Num());
 
-		return FName(Buff.GetData());
+		return FString(Buff.GetData());
 	}
 
-	FMmdMorphKey ConvertMorphKey(const FVmd::MorphKey& InKey)
+	FVector ConvertLocation(const FVmdVector3& VmdLocation)
 	{
-		FMmdMorphKey OutKey;
-		OutKey.Frame = static_cast<int32>(InKey.frame);
-		OutKey.Value = InKey.value;
-
-		return OutKey;
+		return 8.0 * FVector(VmdLocation.X, -VmdLocation.Z, VmdLocation.Y);
 	}
 
-	FMmdInterpolation ConvertInterpolation(const FInterpolation& InInterpolation)
+	FQuat ConvertQuaternion(const FVmdVector4& VmdQuaternion)
 	{
-		FMmdInterpolation OutInterpolation;
-		OutInterpolation.X1 = static_cast<float>(InInterpolation.x1) / 127.f;
-		OutInterpolation.X2 = static_cast<float>(InInterpolation.x2) / 127.f;
-		OutInterpolation.Y1 = static_cast<float>(InInterpolation.y1) / 127.f;
-		OutInterpolation.Y2 = static_cast<float>(InInterpolation.y2) / 127.f;
-
-		return OutInterpolation;
+		return FQuat(VmdQuaternion.X, -VmdQuaternion.Z, VmdQuaternion.Y, VmdQuaternion.W);
 	}
 
-	FMmdCameraKey ConvertCameraKey(const FVmd::CameraKey& InKey)
+	FRotator ConvertCameraEuler(const FVmdVector3& VmdRotation)
 	{
-		FMmdCameraKey OutKey;
-		OutKey.Frame = InKey.frame;
-		OutKey.Cut = 0;
-		OutKey.Location = 8.0 * FVector(InKey.position.X, -InKey.position.Z, InKey.position.Y); // change axis
+		double Pitch = FMath::RadiansToDegrees(VmdRotation.X);
+		double Yaw = FMath::RadiansToDegrees(-VmdRotation.Y) - 90.0;
+		double Roll = FMath::RadiansToDegrees(VmdRotation.Z);
+		return FRotator(Pitch, Yaw, Roll);
+	}
 
-		double Pitch = FMath::RadiansToDegrees(InKey.rotation.X);
-		double Yaw = FMath::RadiansToDegrees(-InKey.rotation.Y) - 90.0;
-		double Roll = FMath::RadiansToDegrees(InKey.rotation.Z);
-		OutKey.Rotation = FRotator(Pitch, Yaw, Roll);
-
-		OutKey.Distance = -8.f * InKey.distance;
-		OutKey.FieldOfView = static_cast<float>(InKey.view_angle);
-
-		OutKey.InterpLocationX = ConvertInterpolation(InKey.ix);
-		OutKey.InterpLocationY = ConvertInterpolation(InKey.iz); // change axis
-		OutKey.InterpLocationZ = ConvertInterpolation(InKey.iy); // change axis
-		OutKey.InterpRotation = ConvertInterpolation(InKey.ir);
-		OutKey.InterpDistance = ConvertInterpolation(InKey.id);
-		OutKey.InterpFieldOfView = ConvertInterpolation(InKey.iv);
-
-		return OutKey;
+	FMmdInterpolation ConvertInterpolation(const FVmdInterpolation& VmdInterpolation)
+	{
+		float X1 = static_cast<float>(VmdInterpolation.x1) / 127.f;
+		float Y1 = static_cast<float>(VmdInterpolation.y1) / 127.f;
+		float X2 = static_cast<float>(VmdInterpolation.x2) / 127.f;
+		float Y2 = static_cast<float>(VmdInterpolation.y2) / 127.f;
+		return FMmdInterpolation{ X1, Y1, X2, Y2 };
 	}
 }
 
@@ -86,7 +70,7 @@ UVmdFactory::UVmdFactory()
 
 bool UVmdFactory::DoesSupportClass(UClass* Class)
 {
-	return (Class == UMmdCameraSequence::StaticClass() || Class == UMmdMorphSequence::StaticClass());
+	return (Class == UMmdCameraSequence::StaticClass() || Class == UMmdAnimationSequence::StaticClass());
 }
 
 UObject* UVmdFactory::FactoryCreateBinary(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn)
@@ -94,61 +78,88 @@ UObject* UVmdFactory::FactoryCreateBinary(UClass* InClass, UObject* InParent, FN
 	UObject* ImportedObject = nullptr;
 
 	poml::VmdBase<FVector3f, FVector4f> Vmd;
-
 	if (!poml::import_vmd(Buffer, BufferEnd - Buffer, Vmd))
 	{
 		return nullptr;
 	}
 
-	bool HasMorph = !Vmd.morph_tracks.empty();
-	bool HasCamera = !Vmd.camera_track.empty();
-	bool AddSuffix = HasMorph && HasCamera;
+	bool bHasAnimation = !Vmd.motion_tracks.empty() || !Vmd.morph_tracks.empty();
+	bool bHasCamera = !Vmd.camera_track.empty();
 
-	if (HasMorph)
+	if (bHasAnimation)
 	{
-		FName Name = AddSuffix ? FName(InName.ToString() + TEXT("_Morph")) : InName;
-		UMmdMorphSequence* Sequence = ImportMorphSequence(Vmd, InParent, Name, Flags);
+		FName Name = InName;
+		UMmdAnimationSequence* AnimationSequence = ImportAnimaionSequence(Vmd, InParent, Name, Flags);
 
 		if (!ImportedObject)
 		{
-			ImportedObject = Sequence;
+			ImportedObject = AnimationSequence;
 		}
 		else
 		{
-			AdditionalImportedObjects.Add(Sequence);
+			AdditionalImportedObjects.Add(AnimationSequence);
 		}
 	}
 
-	if (HasCamera)
+	if (bHasCamera)
 	{
-		FName Name = AddSuffix ? FName(InName.ToString() + TEXT("_Camera")) : InName;
-		UMmdCameraSequence* Sequence = ImportCameraSequence(Vmd, InParent, Name, Flags);
+		FName Name = bHasAnimation ? FName(InName.ToString() + TEXT("_Camera")) : InName;
+		UMmdCameraSequence* CameraSequence = ImportCameraSequence(Vmd, InParent, Name, Flags);
 
 		if (!ImportedObject)
 		{
-			ImportedObject = Sequence;
+			ImportedObject = CameraSequence;
 		}
 		else
 		{
-			AdditionalImportedObjects.Add(Sequence);
+			AdditionalImportedObjects.Add(CameraSequence);
 		}
 	}
 
 	return ImportedObject;
 }
 
-UMmdMorphSequence* UVmdFactory::ImportMorphSequence(const FVmd& Vmd, UObject* InParent, FName InName, EObjectFlags Flags)
+UMmdAnimationSequence* UVmdFactory::ImportAnimaionSequence(const FVmd& Vmd, UObject* InParent, FName InName, EObjectFlags Flags)
 {
-	UMmdMorphSequence* Sequence = NewObject<UMmdMorphSequence>(InParent, InName, Flags);
+	UMmdAnimationSequence* Sequence = NewObject<UMmdAnimationSequence>(InParent, InName, Flags);
 
-	for (auto& [Name, VmdTrack] : Vmd.morph_tracks)
+	for (auto& [Name, VmdKeys] : Vmd.motion_tracks)
 	{
-		FMmdMorphTrack& Track = Sequence->Tracks.Add(ShiftJisToName(Name));
+		FMmdBoneTrack Track;
+		Track.Name = ShiftJisToString(Name);
 
-		for (auto& Key : VmdTrack)
+		for (auto& VmdKey : VmdKeys)
 		{
-			Track.Keys.Add(ConvertMorphKey(Key));
+			FMmdBoneKey Key;
+			Key.Frame = VmdKey.frame;
+			Key.Location = ConvertLocation(VmdKey.position);
+			Key.Rotation = ConvertQuaternion(VmdKey.orientation);
+			Key.LocationXInterpolation = ConvertInterpolation(VmdKey.ix);
+			Key.LocationYInterpolation = ConvertInterpolation(VmdKey.iz); // change axis
+			Key.LocationZInterpolation = ConvertInterpolation(VmdKey.iy); // change axis
+			Key.RotationInterpolation = ConvertInterpolation(VmdKey.ir);
+
+			Track.Keys.Add(Key);
 		}
+
+		Sequence->BoneTracks.Add(Track);
+	}
+
+	for (auto& [Name, VmdKeys] : Vmd.morph_tracks)
+	{
+		FMmdMorphTrack Track;
+		Track.Name = ShiftJisToString(Name);
+
+		for (auto& VmdKey : VmdKeys)
+		{
+			FMmdMorphKey Key;
+			Key.Frame = VmdKey.frame;
+			Key.Value = VmdKey.value;
+
+			Track.Keys.Add(Key);
+		}
+
+		Sequence->MorphTracks.Add(Track);
 	}
 
 	return Sequence;
@@ -158,14 +169,26 @@ UMmdCameraSequence* UVmdFactory::ImportCameraSequence(const FVmd& Vmd, UObject* 
 {
 	UMmdCameraSequence* Sequence = NewObject<UMmdCameraSequence>(InParent, InName, Flags);
 
-	Sequence->Keys.Reserve(static_cast<int32>(Vmd.camera_track.size()));
-
-	for (auto& Key : Vmd.camera_track)
+	for (auto& VmdKey : Vmd.camera_track)
 	{
-		Sequence->Keys.Add(ConvertCameraKey(Key));
+		FMmdCameraKey Key;
+		Key.Frame = VmdKey.frame;
+		Key.Cut = 0;
+		Key.Location = ConvertLocation(VmdKey.position);
+		Key.Rotation = ConvertCameraEuler(VmdKey.rotation);
+		Key.Distance = -8.f * VmdKey.distance;
+		Key.FieldOfView = static_cast<float>(VmdKey.view_angle);
+		Key.LocationXInterpolation = ConvertInterpolation(VmdKey.ix);
+		Key.LocationYInterpolation = ConvertInterpolation(VmdKey.iz); // change axis
+		Key.LocationZInterpolation = ConvertInterpolation(VmdKey.iy); // change axis
+		Key.RotationInterpolation = ConvertInterpolation(VmdKey.ir);
+		Key.DistanceInterpolation = ConvertInterpolation(VmdKey.id);
+		Key.FieldOfViewInterpolation = ConvertInterpolation(VmdKey.iv);
+
+		Sequence->Keys.Add(Key);
 	}
 
-	for (int i = 1; i < Sequence->Keys.Num(); ++i)
+	for (int32 i = 1, NumKeys = Sequence->Keys.Num(); i < NumKeys; ++i)
 	{
 		FMmdCameraKey& Key = Sequence->Keys[i];
 		const FMmdCameraKey& Prev = Sequence->Keys[i - 1];

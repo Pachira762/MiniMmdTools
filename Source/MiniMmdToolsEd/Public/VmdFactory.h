@@ -7,7 +7,7 @@
 #include "poml.h"
 #include "VmdFactory.generated.h"
 
-class UMmdMorphSequence;
+class UMmdAnimationSequence;
 class UMmdCameraSequence;
 
 /**
@@ -28,7 +28,7 @@ public:
 private:
 	using FVmd = poml::VmdBase<FVector3f, FVector4f>;
 
-	UMmdMorphSequence* ImportMorphSequence(const FVmd& Vmd, UObject* InParent, FName InName, EObjectFlags Flags);
+	UMmdAnimationSequence* ImportAnimaionSequence(const FVmd& Vmd, UObject* InParent, FName InName, EObjectFlags Flags);
 
 	UMmdCameraSequence* ImportCameraSequence(const FVmd& Vmd, UObject* InParent, FName InName, EObjectFlags Flags);
 };

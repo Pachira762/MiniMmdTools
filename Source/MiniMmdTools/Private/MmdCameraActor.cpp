@@ -5,6 +5,34 @@
 #include "CineCameraComponent.h"
 #include "MmdCameraSequence.h"
 
+namespace
+{
+	TPair<int32, float> CalcFrameNumber(float Frame, float FrameRate, bool bTemporalSampling)
+	{
+		if (bTemporalSampling)
+		{
+			float Sec = Frame / 30.f;
+			float OutputFrame = FMath::RoundToFloat(Sec * FrameRate);
+			int32 SequenceFrame = static_cast<int32>(OutputFrame / FrameRate * 30.f); // 30FPS
+			float Subframe = (30.f * Sec - SequenceFrame) + 0.5f;
+
+			return { SequenceFrame, Subframe };
+		}
+		else
+		{
+			return { FMath::RoundToInt32(Frame), 0.f };
+		}
+	}
+
+	float ToHorizontalFoV(float VerticalAngle, float SensorWidth, float SensorHeight)
+	{
+		float AngleV = FMath::DegreesToRadians(VerticalAngle / 2.f);
+		float Length = SensorHeight / FMath::Tan(AngleV);
+		float AngleH = FMath::Atan2(SensorWidth, Length);
+		return 2.f * FMath::RadiansToDegrees(AngleH);
+	}
+}
+
 AMmdCameraActor::AMmdCameraActor(const FObjectInitializer& ObjectInitialzier)
 	: Super(ObjectInitialzier.SetDefaultSubobjectClass<UCineCameraComponent>(TEXT("CameraComponent")))
 {
@@ -24,51 +52,25 @@ void AMmdCameraActor::Tick(float DeltaTime)
 	}
 }
 
-bool AMmdCameraActor::ShouldTickIfViewportsOnly() const
-{
-	return true;
-}
-
 void AMmdCameraActor::UpdateCamera()
 {
-	auto [FrameNo, Subframe] = CalcFrame();
-	FMmdCameraProperty Props = CameraSequence->CalcCameraProperty(FrameNo, Subframe);
+	auto [FrameNo, Subframe] = CalcFrameNumber(Frame, OutputFrameRate, bUseTemporalSampling);
 
-	FVector LookAtLocation = LookAtScale * Props.Location + LookAtOffset;
-	FRotator Rotation = Props.Rotation + RotationOffset;
-	float Distance = Props.Distance * DistanceScale * Zoom;
+	int32 CutNo;
+	FVector LookAtLocation;
+	FRotator Rotation;
+	float Distance;
+	float FieldOfView;
+	CameraSequence->CalcCameraProperty(FrameNo, Subframe, CutNo, LookAtLocation, Rotation, Distance, FieldOfView);
+
+	LookAtLocation = LookAtScale * LookAtLocation + LookAtOffset;
+	Rotation += RotationOffset;
+	Distance *= DistanceScale * Zoom;
 	FVector Location = LookAtLocation - Distance * Rotation.Quaternion().GetForwardVector();
 
-	float FieldOfView = ToHorizontalFoV(Props.FieldOfView * FieldOfViewScale / Zoom);
+	const FCameraFilmbackSettings& Filmback = CineCameraComponent->Filmback;
+	FieldOfView = ToHorizontalFoV(FieldOfView * FieldOfViewScale / Zoom, Filmback.SensorWidth, Filmback.SensorHeight);
 
 	CineCameraComponent->SetRelativeLocationAndRotation(Location, Rotation);
 	CineCameraComponent->SetFieldOfView(FieldOfView);
-}
-
-TPair<int32, float> AMmdCameraActor::CalcFrame() const
-{
-	if (bUseTemporalSampling)
-	{
-		float Sec = Frame / 30.f;
-		float OutputFrame = FMath::RoundToFloat(Sec * OutputFrameRate);
-		int32 SequenceFrame = static_cast<int32>(OutputFrame * (30.f / OutputFrameRate));
-		float Subframe = 30.f * (Sec - SequenceFrame / 30.f) + 0.5;
-
-		return { SequenceFrame, Subframe };
-	}
-	else
-	{
-		return { FMath::RoundToInt32(Frame), 0.f };
-	}
-}
-
-float AMmdCameraActor::ToHorizontalFoV(float VerticalFoV) const
-{
-	const FCameraFilmbackSettings& Filmback = CineCameraComponent->Filmback;
-
-	float AngleV = FMath::DegreesToRadians(VerticalFoV / 2.f);
-	float Length = Filmback.SensorHeight / FMath::Tan(AngleV);
-	float AngleH = FMath::Atan2(Filmback.SensorWidth, Length);
-
-	return 2.f * FMath::RadiansToDegrees(AngleH);
 }

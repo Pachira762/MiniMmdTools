@@ -44,6 +44,7 @@ public class MiniMmdToolsEd : ModuleRules
 				"SlateCore",
                 "UnrealEd",
                 "AnimationBlueprintLibrary",
+				"AssetTools",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
