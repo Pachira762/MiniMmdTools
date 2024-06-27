@@ -20,7 +20,8 @@ void UMmdCameraSequence::CalcCameraProperty(int32 Frame, float Subframe, int32& 
 	{
 		OutCutNo = Key0.Cut;
 		OutLocation = Key0.Location;
-		OutRotation = Key0.Rotation;
+		FVector Rotation = Key0.Rotation;
+		OutRotation = FRotator(Rotation.X, Rotation.Y, Rotation.Z);
 		OutDistance = Key0.Distance;
 		OutFieldOfView = Key0.FieldOfView;
 	}
@@ -31,7 +32,8 @@ void UMmdCameraSequence::CalcCameraProperty(int32 Frame, float Subframe, int32& 
 		OutLocation.X = Key1.LocationXInterpolation.Interp(Key0.Location.X, Key1.Location.X, Time);
 		OutLocation.Y = Key1.LocationYInterpolation.Interp(Key0.Location.Y, Key1.Location.Y, Time);
 		OutLocation.Z = Key1.LocationZInterpolation.Interp(Key0.Location.Z, Key1.Location.Z, Time);
-		OutRotation = Key1.RotationInterpolation.Interp(Key0.Rotation, Key1.Rotation, Time);
+		FVector Rotation = Key1.RotationInterpolation.Interp(Key0.Rotation, Key1.Rotation, Time);
+		OutRotation = FRotator(Rotation.X, Rotation.Y, Rotation.Z);
 		OutDistance = Key1.DistanceInterpolation.Interp(Key0.Distance, Key1.Distance, Time);
 		OutFieldOfView = Key1.FieldOfViewInterpolation.Interp(Key0.FieldOfView, Key1.FieldOfView, Time);
 	}

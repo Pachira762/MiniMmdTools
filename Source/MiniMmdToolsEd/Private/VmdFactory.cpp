@@ -39,12 +39,12 @@ namespace
 		return FQuat(VmdQuaternion.X, -VmdQuaternion.Z, VmdQuaternion.Y, VmdQuaternion.W);
 	}
 
-	FRotator ConvertCameraEuler(const FVmdVector3& VmdRotation)
+	FVector ConvertCameraEuler(const FVmdVector3& VmdRotation)
 	{
 		double Pitch = FMath::RadiansToDegrees(VmdRotation.X);
 		double Yaw = FMath::RadiansToDegrees(-VmdRotation.Y) - 90.0;
 		double Roll = FMath::RadiansToDegrees(VmdRotation.Z);
-		return FRotator(Pitch, Yaw, Roll);
+		return FVector(Pitch, Yaw, Roll);
 	}
 
 	FMmdInterpolation ConvertInterpolation(const FVmdInterpolation& VmdInterpolation)

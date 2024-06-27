@@ -22,7 +22,7 @@ struct MINIMMDTOOLS_API FMmdCameraKey
 	FVector Location;
 
 	UPROPERTY(EditAnywhere)
-	FRotator Rotation;
+	FVector Rotation;
 
 	UPROPERTY(EditAnywhere)
 	float Distance;
