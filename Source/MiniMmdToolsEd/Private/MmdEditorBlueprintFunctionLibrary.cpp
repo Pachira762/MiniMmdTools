@@ -12,6 +12,14 @@ void UMmdEditorBlueprintFunctionLibrary::ApplyMorph(UAnimSequence* AnimSequence,
 	}
 
 	USkeletalMesh* Mesh = AnimSequence->GetPreviewMesh();
+	if (Mesh == nullptr)
+	{
+		const USkeleton* Skeleton = AnimSequence->GetSkeleton();
+		check(Skeleton != nullptr);
+
+		Mesh = Skeleton->GetPreviewMesh();
+	}
+
 	check(Mesh != nullptr);
 
 	IAnimationDataController& Controller = AnimSequence->GetController();
