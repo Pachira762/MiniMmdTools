@@ -16,19 +16,19 @@ class MINIMMDTOOLS_API AMmdCameraActor : public ACameraActor
 
 public:
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	TObjectPtr<class UMmdCameraSequence> CameraSequence;
+	TObjectPtr<class UMmdCameraSequence> CameraSequence = nullptr;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	float Frame;
+	float Frame = 0.0;
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	FVector LookAtOffset;
+	FVector LookAtOffset = FVector();
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
 	FVector LookAtScale = FVector(1.0, 1.0, 1.0);
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
-	FRotator RotationOffset;
+	FRotator RotationOffset = FRotator();
 
 	UPROPERTY(Interp, EditAnywhere, BlueprintReadWrite)
 	float DistanceScale = 1.f;

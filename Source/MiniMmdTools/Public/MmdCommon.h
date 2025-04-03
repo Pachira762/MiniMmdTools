@@ -11,16 +11,16 @@ struct MINIMMDTOOLS_API FMmdInterpolation
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	float X1;
+	float X1 = 0.0f;
 
 	UPROPERTY(EditAnywhere)
-	float Y1;
+	float Y1 = 0.0f;
 
 	UPROPERTY(EditAnywhere)
-	float X2;
+	float X2 = 1.0f;
 
 	UPROPERTY(EditAnywhere)
-	float Y2;
+	float Y2 = 1.0f;
 
 	float AlphaAt(float Time) const;
 

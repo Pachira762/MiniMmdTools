@@ -80,6 +80,7 @@ UObject* UVmdFactory::FactoryCreateBinary(UClass* InClass, UObject* InParent, FN
 	poml::VmdBase<FVector3f, FVector4f> Vmd;
 	if (!poml::import_vmd(Buffer, BufferEnd - Buffer, Vmd))
 	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to import VMD file."));
 		return nullptr;
 	}
 

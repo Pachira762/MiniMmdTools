@@ -13,13 +13,13 @@ struct MINIMMDTOOLS_API FMmdBoneKey
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	int32 Frame;
+	int32 Frame = 0;
 
 	UPROPERTY(EditAnywhere)
-	FVector Location;
+	FVector Location = FVector();
 
 	UPROPERTY(EditAnywhere)
-	FQuat Rotation;
+	FQuat Rotation = FQuat();
 
 	UPROPERTY(EditAnywhere)
 	FMmdInterpolation LocationXInterpolation;
@@ -46,10 +46,10 @@ struct MINIMMDTOOLS_API FMmdMorphKey
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	int32 Frame;
+	int32 Frame = 0;
 
 	UPROPERTY(EditAnywhere)
-	float Value;
+	float Value = 0;
 };
 
 USTRUCT(BlueprintType, Category = "MiniMmdTools")

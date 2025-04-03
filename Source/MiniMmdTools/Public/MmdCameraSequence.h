@@ -13,22 +13,22 @@ struct MINIMMDTOOLS_API FMmdCameraKey
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	int32 Frame;
+	int32 Frame = 0;
 
 	UPROPERTY(EditAnywhere)
-	int32 Cut;
+	int32 Cut = 0;
 
 	UPROPERTY(EditAnywhere)
-	FVector Location;
+	FVector Location = FVector();
 
 	UPROPERTY(EditAnywhere)
-	FVector Rotation;
+	FVector Rotation = FVector();
 
 	UPROPERTY(EditAnywhere)
-	float Distance;
+	float Distance = 100.0;
 
 	UPROPERTY(EditAnywhere)
-	float FieldOfView;
+	float FieldOfView = 90.0;
 
 	UPROPERTY(EditAnywhere)
 	FMmdInterpolation LocationXInterpolation;
@@ -59,7 +59,7 @@ public:
 	TArray<FMmdCameraKey> Keys;
 
 	UPROPERTY(EditAnywhere)
-	int32 FrameOffset;
+	int32 FrameOffset = 0;
 
 	void CalcCameraProperty(int32 Frame, float Subframe, int32& OutCutNo, FVector& OutLocation, FRotator& OutRotation, float& OutDistance, float& OutFieldOfView) const;
 };
